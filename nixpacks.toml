@@ -1,6 +1,2 @@
-[phases.setup]
-aptPkgs = ["nodejs" "npm"]
-[phases.build]
-commands = ["npm install", "npm run build"]
-[phases.run]
-command = "npm start"
+[start]
+command = "python main.py"

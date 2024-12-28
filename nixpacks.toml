@@ -1,2 +1,8 @@
+[phases.setup]
+nixPkgs = ["...", "cowsay"]
+
+[phases.build]
+cmds = ["yarn run server:build"]
+
 [start]
-command = "python main.py"
+cmd = "yarn run server:start"

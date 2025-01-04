@@ -36,19 +36,21 @@ class AsyncTikTokClient(httpx.AsyncClient):
 
         soup = BeautifulSoup(page.text, "html.parser")
 
-        if script := soup.select_one('script[id="__UNIVERSAL_DATA_FOR_REHYDRATION__"]'):
-            script = json.loads(script.text)
-        else:
+        # Изменение: поиск скрипта с данными
+        script = soup.find('script', {'id': '__NEXT_DATA__'})
+        if not script:
             raise NoScriptError
 
         try:
-            data = script["__DEFAULT_SCOPE__"]["webapp.video-detail"]["itemInfo"]["itemStruct"]
+            # Изменение: извлечение данных из скрипта
+            data = json.loads(script.string)
+            video_info = data['props']['pageProps']['itemInfo']['itemStruct']
         except KeyError as ex:
             raise NoDataError from ex
 
-        if data["id"] != page_id:
+        if video_info["id"] != page_id:
             raise DifferentPageError
-        return ItemStruct.parse(data)
+        return ItemStruct.parse(video_info)
 
     async def get_video(self, url: str) -> bytes | None:
         resp = await self.get(url)

@@ -25,5 +25,5 @@ settings = Settings(
     api_token=os.getenv("API_TOKEN", ""),  # Удален лишний отступ
     allowed_ids=parse_env_list("ALLOWED_IDS"),
     reply_to_message=parse_env_bool("REPLY_TO_MESSAGE", default="true"),
-    with_captions=parse_env_bool("WITH_CAPTIONS", default="true"),
+    with_captions=parse_env_bool("WITH_CAPTIONS", default="false"),
 )

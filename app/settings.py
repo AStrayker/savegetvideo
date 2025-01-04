@@ -1,7 +1,9 @@
 import json
 import os
 from dataclasses import dataclass
+from dotenv import load_dotenv  # Импорт load_dotenv
 
+load_dotenv()  # Загрузка переменных окружения
 
 @dataclass
 class Settings:
@@ -20,7 +22,7 @@ def parse_env_bool(key: str, default: str = "false") -> bool:
 
 
 settings = Settings(
-    api_token=os.getenv("API_TOKEN", ""),
+    api_token=os.getenv("API_TOKEN", ""),  # Удален лишний отступ
     allowed_ids=parse_env_list("ALLOWED_IDS"),
     reply_to_message=parse_env_bool("REPLY_TO_MESSAGE", default="true"),
     with_captions=parse_env_bool("WITH_CAPTIONS", default="true"),

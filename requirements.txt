@@ -1,1 +1,2 @@
--e .
+aiogram==2.22.1
+python-dotenv==0.20.0

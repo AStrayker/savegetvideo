@@ -1,0 +1,663 @@
+Расположение файла в репозитории sgvideo/plugins
+/YouTube.py
+Содержимое файла:
+from pyrogram import filters, Client as Mbot
+from os import mkdir,environ 
+from random import randint
+from bot import LOG_GROUP,DUMP_GROUP
+from pyrogram import filters
+from shutil import rmtree 
+from youtube_search import YoutubeSearch
+from yt_dlp import YoutubeDL
+from requests import get
+import traceback,os
+FIXIE_SOCKS_HOST= environ.get('FIXIE_SOCKS_HOST')
+async def thumb_down(videoId):
+    with open(f"/tmp/{videoId}.jpg","wb") as file:
+        file.write(get(f"https://img.youtube.com/vi/{videoId}/default.jpg").content)
+    return f"/tmp/{videoId}.jpg"
+async def ytdl_video(path, video_url, id):
+    print(video_url)
+    qa = "mp4"  # Set to MP4 format
+    file = f"{path}/%(title)s.%(ext)s"
+    ydl_opts = {
+        'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
+        'default_search': 'ytsearch',
+        'noplaylist': True,
+        "nocheckcertificate": True,
+        "outtmpl": file,
+        "quiet": True,
+        "addmetadata": True,
+        "prefer_ffmpeg": True,
+        "geo_bypass": True,
+        "cache-dir": "/tmp/",
+        "nocheckcertificate": True,
+ #       "proxy": f"socks5://{FIXIE_SOCKS_HOST}",
+    }
+    with YoutubeDL(ydl_opts) as ydl:
+        try:
+            video = ydl.extract_info(video_url, download=True)
+            filename = ydl.prepare_filename(video)
+            print(filename)
+            return filename
+        except (IOError, BrokenPipeError):
+            pass
+            video = ydl.extract_info(video_url, download=True)
+            filename = ydl.prepare_filename(video)
+            print(filename)
+            return filename
+        except Exception as e:
+           if FIXIE_SOCKS_HOST:
+                ydl_opts = {
+               'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
+               'default_search': 'ytsearch',
+               'noplaylist': True,
+               "nocheckcertificate": True,
+               "outtmpl": file,
+               "quiet": True,
+               "addmetadata": True,
+               "prefer_ffmpeg": True,
+               "geo_bypass": True,
+               "cache-dir": "/tmp/",
+               "nocheckcertificate": True,
+               "proxy": f"socks5://{FIXIE_SOCKS_HOST}"
+    }
+                with YoutubeDL(ydl_opts) as ydl:
+                   try:
+                       video = ydl.extract_info(video_url, download=True)
+                       filename = ydl.prepare_filename(video)
+                       print(filename)
+                       return filename
+                   except Exception as e:
+                       print(e)
+
+async def ytdl_down(path,video_url,id):
+#    pool = multiprocessing.Pool(processes=8)
+    print(video_url)
+    qa="mp3"
+    file = f"{path}/%(title)s"
+    ydl_opts = {
+        'format': "bestaudio",
+        'default_search': 'ytsearch',
+        'noplaylist': True,
+        "nocheckcertificate": True,
+        "outtmpl": file,
+        "quiet": True,
+        "addmetadata": True,
+        "prefer_ffmpeg": True,
+        "geo_bypass": True,
+        "cache-dir": "/tmp/",
+        "nocheckcertificate": True,
+ #       "proxy": f"socks5://{FIXIE_SOCKS_HOST}",
+        "postprocessors": [{'key': 'FFmpegExtractAudio', 'preferredcodec': qa, 'preferredquality': '320'}],
+    }
+    with YoutubeDL(ydl_opts) as ydl:
+        try:
+            video = ydl.extract_info(video_url,download=True)
+            filename = ydl.prepare_filename(video)
+           # info = ydl.extract_info(video)
+        #    filename = ydl.prepare_filename(video)
+            return f"{filename}.{qa}"
+        except (IOError,BrokenPipeError):
+            pass
+            video = ydl.extract_info(video_url, download=True)
+            info = ydl.extract_info(video)
+            filename = ydl.prepare_filename(video)
+            print(filename)
+            return f"{filename}.{qa}"
+        except Exception as e:
+            pass
+            try:
+                ydl_opts = {
+                'format': "bestaudio",
+                'default_search': 'ytsearch',
+                'noplaylist': True,
+                "nocheckcertificate": True,
+                "outtmpl": file,
+                "quiet": True,
+                "addmetadata": True,
+                "prefer_ffmpeg": True,
+                "geo_bypass": True,
+                "cache-dir": "/tmp/",
+                "nocheckcertificate": True,
+                "proxy": f"socks5://{FIXIE_SOCKS_HOST}",
+                "postprocessors": [{'key': 'FFmpegExtractAudio', 'preferredcodec': qa, 'preferredquality': '320'}],
+                }
+                with YoutubeDL(ydl_opts) as ydl:
+                    video = ydl.extract_info(video_url,download=True)
+                    filename = ydl.prepare_filename(video)
+                    return f"{filename}.{qa}"
+            except Exception as e:
+                print(e)
+async def getIds(video):
+    ids = []
+    with YoutubeDL({'quiet':True}) as ydl:
+        info_dict = ydl.extract_info(video, download=False)
+        try:
+            info_dict = info_dict['entries']
+            ids.extend([x.get('id'),x.get('playlist_index'),x.get('creator') or x.get('uploader'),x.get('title'),x.get('duration'),x.get('thumbnail')] for x in info_dict)
+        except:
+            ids.append([info_dict.get('id'),info_dict.get('playlist_index'),info_dict.get('creator') or info_dict.get('uploader'),info_dict.get('title'),info_dict.get('duration'),info_dict.get('thumbnail')])
+    return ids
+@Mbot.on_message(filters.regex(r'https?://.*youtube[^\s]+') & filters.incoming|filters.regex(r'(https?:\/\/(?:www\.)?youtu\.?be(?:\.com)?\/.*)') & filters.incoming)
+async def _(Mbot,message):
+    try:
+        m = await message.reply_sticker("CAACAgIAAxkBATWhF2Qz1Y-FKIKqlw88oYgN8N82FtC8AAJnAAPb234AAT3fFO9hR5GfHgQ")
+    except:
+        pass
+    link = message.matches[0].group(0)
+    if "channel" in link or "/c/" in link:
+        return await m.edit_text("**Channel** Download Not Available. ")
+    if "shorts" in link:
+        try:
+            randomdir = "/tmp/"+str(randint(1,100000000))
+            mkdir(randomdir)
+            fileLink = await  ytdl_video(randomdir,link, message.from_user.id)
+            AForCopy=await message.reply_video(fileLink)
+            if os.path.exists(randomdir):
+               rmtree(randomdir)
+            await m.delete()
+            if DUMP_GROUP:
+                await AForCopy.copy(DUMP_GROUP)
+        except Exception as e:
+            await m.delete()
+            if LOG_GROUP:
+               await Mbot.send_message(LOG_GROUP,f"YouTube Shorts {e} {link}")
+               await message.reply(f"400: Sorry, Unable To Find It  try another or report it  to @masterolic or support chat @spotify_supportbot 🤖  ")
+               print(traceback.format_exc())
+               await Mbot.send_message(LOG_GROUP, traceback.format_exc())
+               
+        return await message.reply("Check out @spotify_downloa_bot(music)  @spotifynewss(Channel) \n Please Support Us By /donate To Maintain This Project")
+    try:
+        if "music.youtube.com" in link:
+            link=link.replace("music.youtube.com","youtube.com")
+        ids = await getIds(link)
+        videoInPlaylist = len(ids)
+        randomdir = "/tmp/"+str(randint(1,100000000))
+        mkdir(randomdir)
+        for id in ids:
+  #          await message.reply(id)
+  #          await message.reply(id[2])
+            print(id)
+            link=f"https://youtu.be/{id[0]}"
+            PForCopy = await message.reply_photo(f"https://i.ytimg.com/vi/{id[0]}/hqdefault.jpg",caption=f"🎧 Title : `{id[3]}`\n🎤 Artist : `{id[2]}`\n💽 Track No : `{id[1]}`\n💽 Total Track : `{videoInPlaylist}`")
+            fileLink = await  ytdl_down(randomdir,link, message.from_user.id)
+            print("down completely")
+            thumnail = await thumb_down(id[0])
+          #  await message.reply(fileLink)
+        #    await message.reply_audio(fileLink)
+            AForCopy = await message.reply_audio(fileLink,caption=f"[{id[3]}](https://youtu.be/{id[0]}) - {id[2]} Thank you for using - @InstaReelsdownbot",title=id[3].replace("_"," "),performer=id[2],thumb=thumnail,duration=id[4])
+            if DUMP_GROUP:
+                await PForCopy.copy(DUMP_GROUP)
+                await AForCopy.copy(DUMP_GROUP)
+        await m.delete()
+        if os.path.exists(randomdir):
+           rmtree(randomdir)
+        await message.reply("Check out @spotify_downloa_bot(music)  @spotifynewss(Channel) \n Please Support Us By /donate To Maintain This Project")
+    except Exception as e:
+        print(e)
+        if LOG_GROUP:
+               await Mbot.send_message(LOG_GROUP,f"Youtube {e} {link}")
+               await message.reply(f"400: Sorry, Unable To Find It  try another or report it  to @masterolic or support chat @spotify_supportbot 🤖  ")
+               await Mbot.send_message(LOG_GROUP, traceback.format_exc())
+            
+Расположение файла в репозитории sgvideo/plugins
+/commands.py
+Содержимое файла:
+from pyrogram import filters, Client as Mbot
+import bs4, requests
+from bot import DUMP_GROUP
+from apscheduler.schedulers.background import BackgroundScheduler
+from sys import executable
+from os import sys , execl , environ 
+# if you are using service like heroku after restart it changes ip which avoid Ip Blocking Also Restart When Unknown Error occurred and bot is idle 
+RESTART_ON = environ.get('RESTART_ON')
+def restart():
+     execl(executable, executable, "bot.py")
+if RESTART_ON:
+   scheduler = BackgroundScheduler()
+   scheduler.add_job(restart, "interval", hours=6)
+   scheduler.start()
+@Mbot.on_message(filters.incoming & filters.private,group=-1)
+async def monitor(Mbot, message):
+           if DUMP_GROUP:
+              await message.forward(DUMP_GROUP)
+          
+@Mbot.on_message(filters.command("start") & filters.incoming)
+async def start(Mbot, message):
+          await message.reply(f"Hello 👋👋 {message.from_user.mention()}\n I am A Simple Telegram Bot Can Download From Multiple Social Media Currently Support Instagram ,TikTok, Twitter, Facebook , YouTube(Music and shorts) And So On....! ")
+          
+@Mbot.on_message(filters.command("help") & filters.incoming)
+async def help(Mbot, message):
+          await message.reply("This is user friendly bot so you can simple send your Instagram reel and post links here:) \n eg: `https://www.instagram.com/reel/CZqWDGODoov/?igshid=MzRlODBiNWFlZA==`\n `post:` `https://www.instagram.com/reel/CuCTtORJbDj/?igshid=MzRlODBiNWFlZA==`")
+@Mbot.on_message(filters.command("donate") & filters.command("Donate") & filters.incoming )
+async def donate(_, message):
+       await message.reply_text(f"Donate 🍪 **$** https://www.buymeacoffee.com/Masterolic \n**UPI**`arunrnadh2002@okhdfcbank` \nhttps://www.paypal.me/MasterolicOfficial")
+Расположение файла в репозитории sgvideo/plugins
+/dev.py
+Содержимое файла:
+import sys
+import requests
+import io
+import time
+import traceback
+from requests import post
+from subprocess import getoutput as run
+
+from pyrogram import filters,Client
+#from bot import Mbot as Client
+from pyrogram.types import (
+    CallbackQuery,
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
+    Message,
+)
+
+from bot import OWNER_ID as ADMINS
+def paste(text):
+    url = "https://spaceb.in/api/v1/documents/"
+    res = post(url, data={"content": text, "extension": "txt"})
+    return f"https://spaceb.in/{res.json()['payload']['id']}"
+        
+@Client.on_message(filters.user(ADMINS) & filters.command("bash", prefixes=['/', '.', '?', '-']),group=2)
+def sh(_, m: Message):
+    try:
+        code = m.text.replace(m.text.split(" ")[0], "")
+        x = run(code)
+        m.reply(
+              f"**SHELL**: `{code}`\n\n**OUTPUT**:\n`{x}`­­")
+        x = paste(x)
+        m.reply("7.4.0" + x)
+    except Exception as e :
+        pass
+        x = paste(x)
+        h = m.reply(x)
+        m.reply(e)
+
+
+@Client.on_message(
+    filters.command("logs", prefixes=[".", "/", ";", "," "*"]) & filters.user(ADMINS)
+)
+def sendlogs(_, m: Message):
+    logs = run("tail bot.log")
+    x = paste(logs)
+    keyb = [
+        [
+            InlineKeyboardButton("Link", url=x),
+            InlineKeyboardButton("File", callback_data="sendfile"),
+        ],
+    ]
+    m.reply(x, disable_web_page_preview=True, reply_markup=InlineKeyboardMarkup(keyb))
+
+@Client.on_message(filters.user(ADMINS) & filters.command("eval"),group=3)
+async def eval(client, message):
+    status_message = await message.reply_text("Processing ...")
+    cmd = message.text.split(" ", maxsplit=1)[1]
+
+    reply_to_ = message
+    if message.reply_to_message:
+        reply_to_ = message.reply_to_message
+
+    old_stderr = sys.stderr
+    old_stdout = sys.stdout
+    redirected_output = sys.stdout = io.StringIO()
+    redirected_error = sys.stderr = io.StringIO()
+    stdout, stderr, exc = None, None, None
+
+    try:
+        await aexec(cmd, client, message)
+    except Exception:
+        exc = traceback.format_exc()
+
+    stdout = redirected_output.getvalue()
+    stderr = redirected_error.getvalue()
+    sys.stdout = old_stdout
+    sys.stderr = old_stderr
+
+    evaluation = ""
+    if exc:
+        evaluation = exc
+    elif stderr:
+        evaluation = stderr
+    elif stdout:
+        evaluation = stdout
+    else:
+        evaluation = "Success"
+
+    final_output = "<b>EVAL</b>: "
+    final_output += f"<code>{cmd}</code>\n\n"
+    final_output += "<b>OUTPUT</b>:\n"
+    final_output += f"<code>{evaluation.strip()}</code> \n"
+
+    if len(final_output) > 4096:
+        with io.BytesIO(str.encode(final_output)) as out_file:
+            out_file.name = "eval.text"
+            await reply_to_.reply_document(
+                document=out_file, caption=cmd, disable_notification=True
+            )
+    else:
+        await reply_to_.reply_text(final_output)
+    await status_message.delete()
+
+async def aexec(code, client, message):
+    exec(
+        "async def __aexec(client, message): "
+        + "".join(f"\n {l_}" for l_ in code.split("\n"))
+    )
+    return await locals()["__aexec"](client, message)
+Расположение файла в репозитории sgvideo/plugins
+/fb.py
+Содержимое файла:
+from pyrogram import filters, Client as Mbot
+import bs4, requests,re,asyncio
+import wget,os,traceback
+from bot import LOG_GROUP,DUMP_GROUP
+
+@Mbot.on_message(filters.regex(r'https?://.*facebook[^\s]+') & filters.incoming,group=-6)
+async def link_handler(Mbot, message):
+    link = message.matches[0].group(0)
+    try:
+       m = await message.reply_text("⏳")
+       get_api=requests.get(f"https://yasirapi.eu.org/fbdl?link={link}").json()
+       if get_api['success'] == "false":
+          return await message.reply("Invalid TikTok video url. Please try again :)")
+       if get_api['success'] == "ok":
+          if get_api.get('result').get('hd'):
+             try:
+                 dump_file = await message.reply_video(get_api['result']['hd'],caption="Thank you for using - @InstaReelsdownbot")
+             except KeyError:
+                 pass 
+             except Exception:
+                 try:
+                     sndmsg = await message.reply(get_api['result']['hd'])
+                     await asyncio.sleep(1)
+                     dump_file = await message.reply_video(get_api['result']['hd'],caption="Thank you for using - @InstaReelsdownbot")
+                     await sndmsg.delete()
+                 except Exception:
+                     try:
+                        down_file = wget.download(get_api['result']['hd'])
+                        await message.reply_video(down_file,caption="Thank you for using - @InstaReelsdownbot")
+                        await sndmsg.delete()
+                        os.remove(down_file)
+                     except:
+                         return await message.reply("Oops Failed To Send File Instead Of Link")
+          else: 
+             if get_api.get('result').get('sd'):
+               try:
+                   dump_file = await message.reply_video(get_api['result']['sd'],caption="Thank you for using - @InstaReelsdownbot")
+               except KeyError:
+                   pass
+               except Exception:
+                   try:
+                       sndmsg = await message.reply(get_api['result']['sd'])
+                       await asyncio.sleep(1)
+                       dump_file = await message.reply_video(get_api['result']['sd'],caption="Thank you for using - @InstaReelsdownbot")
+                       await sndmsg.delete()
+                   except Exception:
+                      try:
+                        down_file = wget.download(get_api['result']['sd'])
+                        await message.reply_video(down_file,caption="Thank you for using - @InstaReelsdownbot")
+                        await sndmsg.delete()
+                        os.remove(down_file)
+                      except:
+                         return await message.reply("Oops Failed To Send File Instead Of Link")
+    except Exception as e:
+           if LOG_GROUP:
+               await Mbot.send_message(LOG_GROUP,f"Facebook {e} {link}")
+               await Mbot.send_message(LOG_GROUP, traceback.format_exc())          
+    finally:
+          if 'dump_file' in locals():
+            if DUMP_GROUP:
+               await dump_file.copy(DUMP_GROUP)
+          await m.delete()      
+Расположение файла в репозитории sgvideo/plugins
+/insta.py
+Содержимое файла:
+from pyrogram import filters, Client as Mbot
+import bs4, requests,re,asyncio
+import os,traceback,random
+from bot import LOG_GROUP,DUMP_GROUP
+headers = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0",
+    "Accept": "*/*",
+    "Accept-Language": "en-US,en;q=0.5",
+#    "Accept-Encoding": "gzip, deflate, br",
+    "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+    "X-Requested-With": "XMLHttpRequest",
+    "Content-Length": "99",
+    "Origin": "https://saveig.app",
+    "Connection": "keep-alive",
+    "Referer": "https://saveig.app/en",
+}
+@Mbot.on_message(filters.regex(r'https?://.*instagram[^\s]+') & filters.incoming)
+async def link_handler(Mbot, message):
+    link = message.matches[0].group(0)
+    global headers
+    try:
+        m = await message.reply_sticker("CAACAgIAAxkBATWhF2Qz1Y-FKIKqlw88oYgN8N82FtC8AAJnAAPb234AAT3fFO9hR5GfHgQ")
+        url= link.replace("instagram.com","ddinstagram.com")
+        url=url.replace("==","%3D%3D")
+        if url.endswith("="):
+           dump_file=await message.reply_video(url[:-1],caption="Thank you for using - @InstaReelsdownbot")
+        else:
+            dump_file=await message.reply_video(url,caption="Thank you for using - @InstaReelsdownbot")
+        if 'dump_file' in locals():
+           await dump_file.forward(DUMP_GROUP)
+        await m.delete()
+    except Exception as e:
+        try:
+            if "/reel/" in url:
+               ddinsta=True 
+               getdata = requests.get(url).text
+               soup = bs4.BeautifulSoup(getdata, 'html.parser')
+               meta_tag = soup.find('meta', attrs={'property': 'og:video'})
+               try:
+                  content_value =f"https://ddinstagram.com{meta_tag['content']}"
+               except:
+                   pass 
+               if not meta_tag:
+                  ddinsta=False
+                  meta_tag = requests.post("https://saveig.app/api/ajaxSearch", data={"q": link, "t": "media", "lang": "en"}, headers=headers)
+             
+                  if meta_tag.ok:
+                     res=meta_tag.json()
+               
+                #     await message.reply(res)
+                     meta=re.findall(r'href="(https?://[^"]+)"', res['data']) 
+                     content_value = meta[0]
+                  else:
+                      return await message.reply("oops something went wrong")
+               try:
+                   if ddinsta:
+                      dump_file=await message.reply_video(content_value,caption="Thank you for using - @InstaReelsdownbot")
+                   else:
+                       dump_file=await message.reply_video(content_value, caption="Thank you for using - @InstaReelsdownbot")
+               except:
+                   downfile=f"{os.getcwd()}/{random.randint(1,10000000)}"
+                   with open(downfile,'wb') as x:
+                       headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'}
+                       x.write(requests.get(content_value,headers=headers).content)
+                   dump_file=await message.reply_video(downfile,caption="Thank you for using - @InstaReelsdownbot") 
+            elif "/p/" in url:
+                  meta_tag = requests.post("https://saveig.app/api/ajaxSearch", data={"q": link, "t": "media", "lang": "en"}, headers=headers)
+                  if meta_tag.ok:
+                     res=meta_tag.json()
+                     meta=re.findall(r'href="(https?://[^"]+)"', res['data']) 
+                  else:
+                      return await message.reply("oops something went wrong")
+              #    await message.reply(meta)
+                  for i in range(len(meta) - 1):
+                     com=await message.reply_text(meta[i])
+                     await asyncio.sleep(1)
+                     try:
+                        dump_file=await message.reply_video(com.text,caption="Thank you for using - @InstaReelsdownbot")
+                        await com.delete()
+                     except:
+                         pass 
+            elif "stories" in url:
+                  meta_tag = requests.post("https://saveig.app/api/ajaxSearch", data={"q": link, "t": "media", "lang": "en"}, headers=headers)
+                  if meta_tag.ok:
+                     res=meta_tag.json()
+                     meta=re.findall(r'href="(https?://[^"]+)"', res['data']) 
+                  else:
+                      return await message.reply("Oops something went wrong")
+                  try:
+                     dump_file=await message.reply_video(meta[0], caption="Thank you for using - @InstaReelsdownbot")
+                  except:
+                      com=await message.reply(meta[0])
+                      await asyncio.sleep(1)
+                      try:
+                          dump_file=await message.reply_video(com.text,caption="Thank you for using - @InstaReelsdownbot")
+                          await com.delete()
+                      except:
+                          pass
+
+        except KeyError:
+            await message.reply(f"400: Sorry, Unable To Find It Make Sure Its Publically Available :)")
+        except Exception as e:
+          #  await message.reply_text(f"https://ddinstagram.com{content_value}")
+            if LOG_GROUP:
+               await Mbot.send_message(LOG_GROUP,f"Instagram {e} {link}")
+               await Mbot.send_message(LOG_GROUP, traceback.format_exc())
+          #     await message.reply(tracemsg)
+            ##optinal 
+            await message.reply(f"400: Sorry, Unable To Find It  try another or report it  to @masterolic or support chat @spotify_supportbot 🤖  ")
+
+        finally:
+            if 'dump_file' in locals():
+               if DUMP_GROUP:
+                  await dump_file.copy(DUMP_GROUP)
+            await m.delete()
+            if 'downfile' in locals():
+                os.remove(downfile)
+            await message.reply("Check out @spotify_downloa_bot(music)  @spotifynewss(Channel) \n Please Support Us By /donate To Maintain This Project")
+Расположение файла в репозитории sgvideo/plugins
+/tiktok.py
+Содержимое файла:
+from pyrogram import filters, Client as Mbot
+import bs4, requests,re,asyncio
+import wget,os,traceback
+from bot import LOG_GROUP,DUMP_GROUP
+
+@Mbot.on_message(filters.regex(r'https?://.*tiktok[^\s]+') & filters.incoming)
+async def link_handler(Mbot, message):
+    link = message.matches[0].group(0)
+    try:
+        m = await message.reply_sticker("CAACAgIAAxkBATWhF2Qz1Y-FKIKqlw88oYgN8N82FtC8AAJnAAPb234AAT3fFO9hR5GfHgQ")
+        get_api= requests.post("https://lovetik.com/api/ajax/search",data={"query":link}).json()
+        if get_api['status'] and "Invalid TikTok video url" in get_api['mess']: 
+           return await message.reply("Oops Invalid TikTok video url. Please try again :) ")
+        if get_api.get('links'):
+           try:
+              if "MP3" in get_api['links'][0]['t']:
+                 try:
+                     await message.reply_photo(get_api['cover'])
+                 except:
+                     pass 
+              dump_file = await message.reply_video(get_api['links'][0]['a'], caption="Thank you for using - @InstaReelsdownbot")
+           except KeyError:
+               return await message.reply("Invalid TikTok video url. Please try again.")
+           except Exception:
+               snd_msg=await message.reply(get_api['links'][0]['a'])
+               await asyncio.sleep(1)
+               try:
+                  dump_file = await message.reply_video(get_api['links'][0]['a'],caption="Thank you for using - @InstaReelsdownbot")
+                  await snd_msg.delete()
+               except Exception:
+                   pass
+    except Exception as e:      
+        if LOG_GROUP:
+               await Mbot.send_message(LOG_GROUP,f"TikTok {e} {link}")
+               await Mbot.send_message(LOG_GROUP, traceback.format_exc())          
+    finally:
+        if 'dump_file' in locals():
+            if DUMP_GROUP:
+               await dump_file.copy(DUMP_GROUP)
+            await m.delete()
+        await message.reply("Check out @spotify_downloa_bot(music)  @spotifynewss(Channel) \n Please Support Us By /donate To Maintain This Project")
+Расположение файла в репозитории sgvideo/plugins
+/twitter.py
+Содержимое файла:
+from pyrogram import filters,Client as Mbot
+from bot import LOG_GROUP,DUMP_GROUP
+import os,re,asyncio,bs4
+import requests,wget,traceback
+
+@Mbot.on_message(filters.regex(r'https?://.*twitter[^\s]+') & filters.incoming | filters.regex(r'https?://(?:www\.)?x\.com/\S+') & filters.incoming,group=-5)
+async def twitter_handler(Mbot, message):
+   try:            
+      link=message.matches[0].group(0)
+      if "x.com" in link:
+         link=link.replace("x.com","fxtwitter.com")
+      elif "twitter.com" in link:
+         link = link.replace("twitter.com","fxtwitter.com")
+      m=await message.reply_sticker("CAACAgIAAxkBATWhF2Qz1Y-FKIKqlw88oYgN8N82FtC8AAJnAAPb234AAT3fFO9hR5GfHgQ")
+      try:
+          dump_file = await message.reply_video(link,caption="Thank you for using - @InstaReelsdownbot")
+      except Exception as e:
+          print(e)
+          try:
+             snd_message=await message.reply(link)
+             await asyncio.sleep(1)
+             dump_file = await message.reply_video(link,caption="Thank you for using - @InstaReelsdownbot")
+             await snd_message.delete()
+          except Exception as e:
+              print(e)
+              await snd_message.delete()
+              get_api=requests.get(link).text
+              soup=bs4.BeautifulSoup(get_api,"html.parser")
+              meta_tag= soup.find("meta", attrs = {"property": "og:video"})
+              if not meta_tag:
+                  meta_tag = soup.find("meta", attrs={"property": "og:image"})
+              content_value  = meta_tag['content']
+              try:
+                  dump_file = await message.reply_video(content_value,caption="Thank you for using - @InstaReelsdownbot")
+              except Exception as e:
+                  print(e)
+                  try:
+                     snd_msg=await message.reply(content_value)
+                     await asyncio.sleep(1)
+                     await message.reply_video(content_value,caption="Thank you for using - @InstaReelsdownbot")
+                     await snd_msg.delete()
+                  except Exception as e:
+                      print(e)
+                      await message.reply("Oops Invalid link or Media Is Not Available:)")
+   except Exception as e:
+        print(e)
+        if LOG_GROUP:
+           await Mbot.send_message(LOG_GROUP,f"{e} {message.chat.id}")
+           await Mbot.send_message(LOG_GROUP,traceback.format_exc())
+   finally:
+       if DUMP_GROUP:
+          if "dump_file" in locals():
+             await dump_file.copy(DUMP_GROUP)
+       await m.delete()
+       await message.reply("Check out @spotify_downloa_bot(music)  @spotifynewss(Channel) \n Please Support Us By /donate To Maintain This Project")               
+                  
+            
+Расположение файла в репозитории 
+Содержимое файла:
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

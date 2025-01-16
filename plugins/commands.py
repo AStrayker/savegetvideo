@@ -1,5 +1,6 @@
 from pyrogram import filters, Client as Mbot
-import bs4, requests
+import sqlite3
+import os
 from bot import DUMP_GROUP
 from apscheduler.schedulers.background import BackgroundScheduler
 from sys import executable
@@ -16,8 +17,32 @@ if RESTART_ON:
     scheduler.add_job(restart, "interval", hours=6)
     scheduler.start()
 
-# Словарь для отслеживания пользователей, которым уже отправлено приветствие
-greeted_users = {}
+# Функция для работы с базой данных
+def init_db():
+    conn = sqlite3.connect('bot.db')
+    cursor = conn.cursor()
+    cursor.execute('''CREATE TABLE IF NOT EXISTS greeted_users
+                      (user_id INTEGER PRIMARY KEY)''')
+    conn.commit()
+    conn.close()
+
+def user_greeted(user_id):
+    conn = sqlite3.connect('bot.db')
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM greeted_users WHERE user_id=?", (user_id,))
+    result = cursor.fetchone()
+    conn.close()
+    return result is not None
+
+def mark_user_as_greeted(user_id):
+    conn = sqlite3.connect('bot.db')
+    cursor = conn.cursor()
+    cursor.execute("INSERT OR IGNORE INTO greeted_users (user_id) VALUES (?)", (user_id,))
+    conn.commit()
+    conn.close()
+
+# Инициализация базы данных при старте бота
+init_db()
 
 @Mbot.on_message(filters.incoming & filters.private, group=-1)
 async def monitor(Mbot, message):
@@ -27,13 +52,11 @@ async def monitor(Mbot, message):
 @Mbot.on_message(filters.command("start") & filters.incoming)
 async def start(Mbot, message):
     user_id = message.from_user.id
-    # Проверяем, был ли уже отправлен приветственный текст этому пользователю
-    if user_id not in greeted_users:
+    if not user_greeted(user_id):
         await message.reply(f"Hello 👋👋 {message.from_user.mention()}\nI am A Simple Telegram Bot Can Download From Multiple Social Media Currently Support Instagram, TikTok, Twitter, Facebook, YouTube(Music and shorts) And So On....!")
-        # Помечаем пользователя как приветствованного
-        greeted_users[user_id] = True
+        mark_user_as_greeted(user_id)
     else:
-        # Если пользователь уже был приветствован, ничего не делаем
+        # Если пользователь уже был приветствован, просто игнорируем команду
         pass
 
 @Mbot.on_message(filters.command("help") & filters.incoming)

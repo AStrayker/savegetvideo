@@ -1,53 +1,29 @@
-from aiogram import Bot, Dispatcher, F
-from aiogram.types import BufferedInputFile, Message
-from settings import settings
-from tiktok.api import TikTokAPI
-import time
-
-dp = Dispatcher()
-
-filters = [
-    F.text.contains("tiktok.com"),
-    (not settings.allowed_ids)
-    | F.chat.id.in_(settings.allowed_ids)
-    | F.from_user.id.in_(settings.allowed_ids),
-]
-
-# Словарь для отслеживания последнего времени отправки сообщения для каждого пользователя
-last_message_time = {}
-
-@dp.message(*filters)
-@dp.channel_post(*filters)
-async def handle_tiktok_request(message: Message, bot: Bot) -> None:
-    user_id = message.from_user.id if message.from_user else message.chat.id
-    current_time = time.time()
-    
-    # Проверяем, не отправляли ли мы сообщение этому пользователю недавно
-    if user_id in last_message_time and (current_time - last_message_time[user_id]) < 10:  # 10 секунд таймаут
-        return  # Если да, то пропускаем обработку
-    
-    entries = [
-        message.text[e.offset : e.offset + e.length]
-        for e in message.entities or []
-        if message.text is not None
-    ]
-
-    urls = [
-        u if u.startswith("http") else f"https://{u}"
-        for u in filter(lambda e: "tiktok.com" in e, entries)
-    ]
-
-    async for tiktok in TikTokAPI.download_tiktoks(urls):
-        if not tiktok.video:
-            continue
-
-        video = BufferedInputFile(tiktok.video, filename="video.mp4")
-        caption = tiktok.caption if settings.with_captions else None
-
-        if settings.reply_to_message:
-            await message.reply_video(video=video, caption=caption)
-        else:
-            await bot.send_video(chat_id=message.chat.id, video=video, caption=caption)
-    
-    # Отмечаем время отправки сообщения
-    last_message_time[user_id] = current_time
+from pyrogram import filters, Client as Mbot
+import bs4, requests
+from bot import DUMP_GROUP
+from apscheduler.schedulers.background import BackgroundScheduler
+from sys import executable
+from os import sys , execl , environ 
+# if you are using service like heroku after restart it changes ip which avoid Ip Blocking Also Restart When Unknown Error occurred and bot is idle 
+RESTART_ON = environ.get('RESTART_ON')
+def restart():
+     execl(executable, executable, "bot.py")
+if RESTART_ON:
+   scheduler = BackgroundScheduler()
+   scheduler.add_job(restart, "interval", hours=6)
+   scheduler.start()
+@Mbot.on_message(filters.incoming & filters.private,group=-1)
+async def monitor(Mbot, message):
+           if DUMP_GROUP:
+              await message.forward(DUMP_GROUP)
+          
+@Mbot.on_message(filters.command("start") & filters.incoming)
+async def start(Mbot, message):
+          await message.reply(f"Hello 👋👋 {message.from_user.mention()}\n I am A Simple Telegram Bot Can Download From Multiple Social Media Currently Support Instagram ,TikTok, Twitter, Facebook , YouTube(Music and shorts) And So On....! ")
+          
+@Mbot.on_message(filters.command("help") & filters.incoming)
+async def help(Mbot, message):
+          await message.reply("This is user friendly bot so you can simple send your Instagram reel and post links here:) \n eg: `https://www.instagram.com/reel/CZqWDGODoov/?igshid=MzRlODBiNWFlZA==`\n `post:` `https://www.instagram.com/reel/CuCTtORJbDj/?igshid=MzRlODBiNWFlZA==`")
+@Mbot.on_message(filters.command("donate") & filters.command("Donate") & filters.incoming )
+async def donate(_, message):
+       await message.reply_text(f"Donate 🍪 **$** https://www.buymeacoffee.com/Masterolic \n**UPI**`arunrnadh2002@okhdfcbank` \nhttps://www.paypal.me/MasterolicOfficial")

@@ -16,15 +16,25 @@ if RESTART_ON:
     scheduler.add_job(restart, "interval", hours=6)
     scheduler.start()
 
+# Словарь для отслеживания пользователей, которым уже отправлено приветствие
+greeted_users = {}
+
 @Mbot.on_message(filters.incoming & filters.private, group=-1)
 async def monitor(Mbot, message):
     if DUMP_GROUP:
         await message.forward(DUMP_GROUP)
 
-# Используем group=1, чтобы избежать дублирования обработки команды /start
-@Mbot.on_message(filters.command("start") & filters.incoming, group=1)
+@Mbot.on_message(filters.command("start") & filters.incoming)
 async def start(Mbot, message):
-    await message.reply(f"Hello 👋👋 {message.from_user.mention()}\nI am A Simple Telegram Bot Can Download From Multiple Social Media Currently Support Instagram, TikTok, Twitter, Facebook, YouTube(Music and shorts) And So On....!")
+    user_id = message.from_user.id
+    # Проверяем, был ли уже отправлен приветственный текст этому пользователю
+    if user_id not in greeted_users:
+        await message.reply(f"Hello 👋👋 {message.from_user.mention()}\nI am A Simple Telegram Bot Can Download From Multiple Social Media Currently Support Instagram, TikTok, Twitter, Facebook, YouTube(Music and shorts) And So On....!")
+        # Помечаем пользователя как приветствованного
+        greeted_users[user_id] = True
+    else:
+        # Если пользователь уже был приветствован, ничего не делаем
+        pass
 
 @Mbot.on_message(filters.command("help") & filters.incoming)
 async def help(Mbot, message):

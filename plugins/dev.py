@@ -19,7 +19,7 @@ from bot import OWNER_ID as ADMINS
 def paste(text):
     url = "https://spaceb.in/api/v1/documents/"
     res = post(url, data={"content": text, "extension": "txt"})
-    return f"https://spaceb.in/{res.json()['payload']['id']}
+    return f"https://spaceb.in/{res.json()['payload']['id']}"
 
 @Client.on_message(filters.user(ADMINS) & filters.command("bash", prefixes=['/', '.', '?', '-']), group=2)
 def sh(_, m: Message):

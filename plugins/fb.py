@@ -10,13 +10,11 @@ async def link_handler(Mbot, message):
         m = await message.reply_text("⏳")
         get_api = requests.get(f"https://yasirapi.eu.org/fbdl?link={link}").json()
         if get_api['success'] == "false":
-            return await message.reply("Invalid TikTok video url. Please try again :)")
+            return await message.reply("Invalid Facebook video url. Please try again :)")
         if get_api['success'] == "ok":
             if get_api.get('result').get('hd'):
                 try:
                     dump_file = await message.reply_video(get_api['result']['hd'], caption="Thank you for using - @InstaReelsdownbot")
-                    if DUMP_GROUP:
-                        await dump_file.copy(DUMP_GROUP)
                 except KeyError:
                     pass
                 except Exception:
@@ -25,24 +23,18 @@ async def link_handler(Mbot, message):
                         await asyncio.sleep(1)
                         dump_file = await message.reply_video(get_api['result']['hd'], caption="Thank you for using - @InstaReelsdownbot")
                         await sndmsg.delete()
-                        if DUMP_GROUP:
-                            await dump_file.copy(DUMP_GROUP)
                     except Exception:
                         try:
                             down_file = wget.download(get_api['result']['hd'])
                             await message.reply_video(down_file, caption="Thank you for using - @InstaReelsdownbot")
                             await sndmsg.delete()
                             os.remove(down_file)
-                            if DUMP_GROUP:
-                                await dump_file.copy(DUMP_GROUP)
                         except:
                             return await message.reply("Oops Failed To Send File Instead Of Link")
             else:
                 if get_api.get('result').get('sd'):
                     try:
                         dump_file = await message.reply_video(get_api['result']['sd'], caption="Thank you for using - @InstaReelsdownbot")
-                        if DUMP_GROUP:
-                            await dump_file.copy(DUMP_GROUP)
                     except KeyError:
                         pass
                     except Exception:
@@ -51,16 +43,12 @@ async def link_handler(Mbot, message):
                             await asyncio.sleep(1)
                             dump_file = await message.reply_video(get_api['result']['sd'], caption="Thank you for using - @InstaReelsdownbot")
                             await sndmsg.delete()
-                            if DUMP_GROUP:
-                                await dump_file.copy(DUMP_GROUP)
                         except Exception:
                             try:
                                 down_file = wget.download(get_api['result']['sd'])
                                 await message.reply_video(down_file, caption="Thank you for using - @InstaReelsdownbot")
                                 await sndmsg.delete()
                                 os.remove(down_file)
-                                if DUMP_GROUP:
-                                    await dump_file.copy(DUMP_GROUP)
                             except:
                                 return await message.reply("Oops Failed To Send File Instead Of Link")
     except Exception as e:
@@ -68,5 +56,7 @@ async def link_handler(Mbot, message):
             await Mbot.send_message(LOG_GROUP, f"Facebook {e} {link}")
             await Mbot.send_message(LOG_GROUP, traceback.format_exc())
     finally:
+        if 'dump_file' in locals():
+            if DUMP_GROUP:
+                await dump_file.copy(DUMP_GROUP)
         await m.delete()
-        await message.reply("Check out @spotify_downloa_bot(music)  @spotifynewss(Channel) \n Please Support Us By /donate To Maintain This Project")

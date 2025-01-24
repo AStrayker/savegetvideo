@@ -6,8 +6,7 @@ import traceback
 from requests import post
 from subprocess import getoutput as run
 
-from pyrogram import filters,Client
-#from bot import Mbot as Client
+from pyrogram import filters, Client
 from pyrogram.types import (
     CallbackQuery,
     InlineKeyboardButton,
@@ -16,26 +15,25 @@ from pyrogram.types import (
 )
 
 from bot import OWNER_ID as ADMINS
+
 def paste(text):
     url = "https://spaceb.in/api/v1/documents/"
     res = post(url, data={"content": text, "extension": "txt"})
-    return f"https://spaceb.in/{res.json()['payload']['id']}"
-        
-@Client.on_message(filters.user(ADMINS) & filters.command("bash", prefixes=['/', '.', '?', '-']),group=2)
+    return f"https://spaceb.in/{res.json()['payload']['id']}
+
+@Client.on_message(filters.user(ADMINS) & filters.command("bash", prefixes=['/', '.', '?', '-']), group=2)
 def sh(_, m: Message):
     try:
         code = m.text.replace(m.text.split(" ")[0], "")
         x = run(code)
         m.reply(
-              f"**SHELL**: `{code}`\n\n**OUTPUT**:\n`{x}`­­")
+            f"**SHELL**: `{code}`\n\n**OUTPUT**:\n`{x}`­­")
         x = paste(x)
         m.reply("7.4.0" + x)
-    except Exception as e :
-        pass
+    except Exception as e:
         x = paste(x)
         h = m.reply(x)
         m.reply(e)
-
 
 @Client.on_message(
     filters.command("logs", prefixes=[".", "/", ";", "," "*"]) & filters.user(ADMINS)
@@ -51,7 +49,7 @@ def sendlogs(_, m: Message):
     ]
     m.reply(x, disable_web_page_preview=True, reply_markup=InlineKeyboardMarkup(keyb))
 
-@Client.on_message(filters.user(ADMINS) & filters.command("eval"),group=3)
+@Client.on_message(filters.user(ADMINS) & filters.command("eval"), group=3)
 async def eval(client, message):
     status_message = await message.reply_text("Processing ...")
     cmd = message.text.split(" ", maxsplit=1)[1]
@@ -103,7 +101,7 @@ async def eval(client, message):
 
 async def aexec(code, client, message):
     exec(
-        "async def __aexec(client, message): "
-        + "".join(f"\n {l_}" for l_ in code.split("\n"))
+        "async def __aexec(client, message): " +
+        "".join(f"\n {l_}" for l_ in code.split("\n"))
     )
     return await locals()["__aexec"](client, message)

@@ -23,11 +23,12 @@ async def monitor(Mbot, message):
 
 @Mbot.on_message(filters.command("start") & filters.incoming)
 async def start(Mbot, message):
-    await message.reply(f"Hello 👋👋 {message.from_user.mention()}\n I am A Simple Telegram Bot Can Download From Multiple Social Media Currently Support Instagram ,TikTok, Twitter, Facebook , YouTube(Music and shorts) And So On....! ")
+    await message.reply(f"Привет {message.from_user.mention()}\n . Я бот Фрэд! И я могу скачивать видео с Instagram, Twitter и TikTok.
+Отправь мне ссылку на видео - а я тебе ответом пришлю видео, которое ты сможешь скачать на своё устройство ")
 
 @Mbot.on_message(filters.command("help") & filters.incoming)
 async def help(Mbot, message):
-    await message.reply("This is user friendly bot so you can simple send your Instagram reel and post links here:) \n eg: `https://www.instagram.com/reel/CZqWDGODoov/?igshid=MzRlODBiNWFlZA==`\n `post:` `https://www.instagram.com/reel/CuCTtORJbDj/?igshid=MzRlODBiNWFlZA==`")
+    await message.reply("Если возникнуть проблемы напиши мне @Alex_Strayker")
 
 @Mbot.on_message(filters.command("donate") & filters.command("Donate") & filters.incoming)
 async def donate(_, message):

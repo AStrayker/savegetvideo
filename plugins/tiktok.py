@@ -18,7 +18,7 @@ async def link_handler(Mbot, message):
                         await message.reply_photo(get_api['cover'])
                     except:
                         pass
-                dump_file = await message.reply_video(get_api['links'][0]['a'], caption="Thank you for using - @InstaReelsdownbot")
+                dump_file = await message.reply_video(get_api['links'][0]['a'], caption="")
             except KeyError:
                 return await message.reply("Invalid TikTok video url. Please try again.")
             except Exception:

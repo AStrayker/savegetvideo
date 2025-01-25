@@ -19,7 +19,7 @@ async def twitter_handler(Mbot, message):
             try:
                 snd_message = await message.reply(link)
                 await asyncio.sleep(1)
-                dump_file = await message.reply_video(link, caption="Thank you for using - @InstaReelsdownbot")
+                dump_file = await message.reply_video(link, caption="")
                 await snd_message.delete()
             except Exception as e:
                 print(e)
@@ -31,7 +31,7 @@ async def twitter_handler(Mbot, message):
                     meta_tag = soup.find("meta", attrs={"property": "og:image"})
                 content_value = meta_tag['content']
                 try:
-                    dump_file = await message.reply_video(content_value, caption="Thank you for using - @InstaReelsdownbot")
+                    dump_file = await message.reply_video(content_value, caption="")
                 except Exception as e:
                     print(e)
                     try:

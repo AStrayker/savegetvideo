@@ -159,7 +159,8 @@ async def _(Mbot, message):
         if LOG_GROUP:
             await Mbot.send_message(LOG_GROUP, f"YouTube {e} {link}")
             await message.reply(f"400: Sorry, Unable To Find It try another or report it to @masterolic or support chat @spotify_supportbot 🤖")
-            await Mbot.send_message(LOG_GROUP, traceback.format_exc())from pyrogram import filters, Client as Mbot
+            await Mbot.send_message(LOG_GROUP, traceback.format_exc())
+from pyrogram import filters, Client as Mbot
 from os import mkdir, environ
 from random import randint
 from bot import LOG_GROUP, DUMP_GROUP
